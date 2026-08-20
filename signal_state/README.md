@@ -28,11 +28,21 @@ RTX 3070 Ti 기준. 데이터를 10배(739→7,377장) 늘리면서도 학습 �
 이는 몽타주에서 보이듯 실제로 헷갈리던 클래스(green_straight/green_left) 오분류가
 줄어든 결과.
 
-### 알려진 함정 — `nms=True` export가 여기서도 안 먹힘
+**[v1.2.0](https://github.com/mastic-choi/yolo-V8-KMU-xycar/releases/tag/v1.2.0-signal_state)**:
+가중치는 v1.1.0과 동일(재학습 없음) — ONNX export만 NMS 내장 방식으로 수정
+(아래 "알려진 함정" 참고). 표의 지표는 v1.1.0과 동일.
+
+### 알려진 함정 — `nms=True` export가 여기서도 안 먹힘 (v1.2.0에서 해결)
 
 `target_vehicle`이 겪었던 것과 똑같은 문제 재현: v1.1.0 `best.onnx`를
 `onnxruntime`으로 열어보면 output shape이 `[1, 7, 8400]`(NMS 미적용 raw, 4 박스
-좌표 + 클래스 3개)이다. 실차/ROS 노드에 바로 넣기 전 export를 다시 확인/수정할 것.
+좌표 + 클래스 3개)이다. 원인은 ultralytics 8.3.0의 `export_onnx()`가 `nms` 인자를
+아예 참조하지 않는 것 — `nms=True`는 CoreML 전용이고 일반 `DetectionModel`의 ONNX
+export에는 적용되지 않는다. **해결**: `scripts/export_onnx_with_nms.py`로
+`torchvision.ops.batched_nms`를 forward()에 심은 wrapper를 만들어 재export —
+재학습 없이 같은 `best.pt`로
+[v1.2.0](https://github.com/mastic-choi/yolo-V8-KMU-xycar/releases/tag/v1.2.0-signal_state)
+`best_nms.onnx`(output0 `[1,N,6]` = `[x1,y1,x2,y2,conf,cls]`) 생성 완료.
 
 ## 데이터 소스
 
@@ -84,3 +94,5 @@ RTX 3070 Ti 기준. 데이터를 10배(739→7,377장) 늘리면서도 학습 �
   (위 "알려진 함정" 참고).
 - `scripts/make_before_after_montage.py` — 위 Results 몽타주를 만드는 스크립트
   (v1.0.0 vs v1.1.0, 같은 프레임 4장에 GT 대비 정오답 색상 표시).
+- `scripts/export_onnx_with_nms.py` — v1.2.0에서 추가, NMS 내장 ONNX 재export용
+  (위 "알려진 함정" 참고). `target_vehicle/scripts/`에도 동일 스크립트 있음.

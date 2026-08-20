@@ -30,6 +30,10 @@ RTX 3070 Ti 기준. v1.1.0이 v1.0.0 대비 mAP50-95 +0.011, 데이터는 3배(2
 늘었지만 Precision/Recall은 이미 1.0이라 큰 차이는 mAP50-95(더 엄격한 IoU 기준)에서
 드러남 — 데이터 다양성이 늘면서 박스 타이트니스가 개선된 것으로 보임.
 
+**[v1.2.0](https://github.com/mastic-choi/yolo-V8-KMU-xycar/releases/tag/v1.2.0)**:
+가중치는 v1.1.0과 동일(재학습 없음) — ONNX export만 NMS 내장 방식으로 수정
+(아래 "알려진 함정" 참고). 표의 지표는 v1.1.0과 동일.
+
 ## 데이터 소스 (전부 로컬 경로, git에 이미지 자체는 안 올림)
 
 | 풀 | 경로 | 장수 | 성격 |
@@ -107,6 +111,10 @@ RTX 3070 Ti 기준. v1.1.0이 v1.0.0 대비 mAP50-95 +0.011, 데이터는 3배(2
   구간(dataset/lap_005 프레임 범위)을 `data/candidates/`로 복사해 재현.
 - `scripts/make_before_after_montage.py` — 위 Results 몽타주를 만드는 스크립트
   (COCO yolov8n vs 파인튜닝 v1.1.0, 같은 프레임 4장 비교).
+- `scripts/export_onnx_with_nms.py` — [v1.2.0](https://github.com/mastic-choi/yolo-V8-KMU-xycar/releases/tag/v1.2.0)
+  에서 추가. `model.export(nms=True)`가 안 먹히는 문제(아래 "알려진 함정") 해결용 —
+  `torchvision.ops.batched_nms`를 forward()에 심은 wrapper로 직접 재학습 없이
+  같은 `best.pt`를 NMS 내장 ONNX로 재export.
 
 ## 알려진 함정 (실제로 겪은 것들)
 
@@ -123,11 +131,15 @@ RTX 3070 Ti 기준. v1.1.0이 v1.0.0 대비 mAP50-95 +0.011, 데이터는 3배(2
   116장 중 62장이 사람 검수 결과 실제로는 정상 검출이었다(반사광/그림자로 HSV
   판정이 흔들림). 자동 필터는 후보를 줄이는 용도로만 쓰고, 최종 판단은 항상
   사람이 원본을 보고 할 것.
-- **`model.export(format='onnx', nms=True)`가 항상 먹히는 게 아니다** — v1.0.0/
-  v1.1.0 `best.onnx` 둘 다 output shape이 `[1,5,8400]`(NMS 미적용 raw 출력)이었다.
-  `track_drive/perception/yolo_vehicle.py`가 기대하는 `nms=True` 6열 포맷
-  (`[x1,y1,x2,y2,conf,cls]`)과 다르므로 **이대로는 실차에 못 넣는다** — 실차 배포
-  전 export를 다시 확인/수정할 것.
+- **`model.export(format='onnx', nms=True)`가 항상 먹히는 게 아니다 — (v1.2.0에서
+  해결)** v1.0.0/v1.1.0 `best.onnx` 둘 다 output shape이 `[1,5,8400]`(NMS 미적용
+  raw 출력)이었다. 원인은 ultralytics 8.3.0의 `export_onnx()`가 `self.args.nms`를
+  아예 참조하지 않는다는 것 — `nms=True`는 CoreML export 전용 옵션이고, 일반
+  `DetectionModel`(yolov8n 등)의 ONNX export에는 적용되지 않는다(`end2end` 모델만
+  예외). **해결**: `scripts/export_onnx_with_nms.py`로 `torchvision.ops.batched_nms`를
+  forward()에 심은 wrapper를 만들어 재export — 재학습 없이 같은 `best.pt`로
+  [v1.2.0](https://github.com/mastic-choi/yolo-V8-KMU-xycar/releases/tag/v1.2.0)
+  `best_nms.onnx`(output0 `[1,N,6]` = `[x1,y1,x2,y2,conf,cls]`) 생성 완료.
 - **val 숫자는 세션 랜덤 분할이라 과대평가 가능** — 두 라운드 다 프레임 단위 랜덤
   분할이라 인접 프레임이 train/val에 나뉘어 들어갈 수 있음. `signal_state` 프로젝트
   에서는 이 교훈을 반영해 세션(시간 구간) 단위로 분할함.

@@ -13,8 +13,8 @@
 
 | 프로젝트 | 검출 대상 | 클래스 | 상태 |
 |---|---|---|---|
-| [`target_vehicle/`](target_vehicle/README.md) | 방해차량(vehA #46, TRAXXAS) | 1개 (`target_vehicle`) | [v1.1.0](https://github.com/mastic-choi/yolo-V8-KMU-xycar/releases/tag/v1.1.0) 완료 |
-| [`signal_state/`](signal_state/README.md) | 트랙 신호등 점등 상태 | 3개 (`red`/`green_straight`/`green_left`) | v1.1.0 완료 |
+| [`target_vehicle/`](target_vehicle/README.md) | 방해차량(vehA #46, TRAXXAS) | 1개 (`target_vehicle`) | [v1.2.0](https://github.com/mastic-choi/yolo-V8-KMU-xycar/releases/tag/v1.2.0) (NMS 내장 ONNX) |
+| [`signal_state/`](signal_state/README.md) | 트랙 신호등 점등 상태 | 3개 (`red`/`green_straight`/`green_left`) | [v1.2.0](https://github.com/mastic-choi/yolo-V8-KMU-xycar/releases/tag/v1.2.0-signal_state) (NMS 내장 ONNX) |
 
 ---
 
@@ -31,7 +31,8 @@
 | Model | 학습 데이터 | epoch | 학습 시간 | mAP50 | mAP50-95 | Precision | Recall |
 |:-----:|:-----------:|:-----:|:---------:|:-----:|:--------:|:---------:|:------:|
 | [v1.0.0](https://github.com/mastic-choi/yolo-V8-KMU-xycar/releases/tag/v1.0.0) | seed_labeled 2,127장 | 80 (best@50) | 10.5분 | 0.995 | 0.974 | 1.0 | 1.0 |
-| **[v1.1.0](https://github.com/mastic-choi/yolo-V8-KMU-xycar/releases/tag/v1.1.0)** | seed+round2 6,041장 | 139 (best@76) | 49분 | 0.995 | **0.985** :arrow_up: | 1.0 | 1.0 |
+| [v1.1.0](https://github.com/mastic-choi/yolo-V8-KMU-xycar/releases/tag/v1.1.0) | seed+round2 6,041장 | 139 (best@76) | 49분 | 0.995 | 0.985 :arrow_up: | 1.0 | 1.0 |
+| **[v1.2.0](https://github.com/mastic-choi/yolo-V8-KMU-xycar/releases/tag/v1.2.0)** | v1.1.0과 동일 가중치 — **NMS 내장 ONNX**로 재export | — | — | 0.995 | 0.985 | 1.0 | 1.0 |
 
 방법론, 데이터 소스, 알려진 함정은 → [`target_vehicle/README.md`](target_vehicle/README.md)
 
