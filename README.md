@@ -4,6 +4,9 @@
 `yolo_vehicle.py`(방해차량 검출)가 신뢰도 0.45대로 낮게 나오는 문제를 고치기 위한
 **전용 차량(방해차량) YOLOv8 파인튜닝** 작업 저장소.
 
+이 아래 내용은 `target_vehicle` 하위 프로젝트에 대한 설명. 신호등(signal_state)
+분류 파인튜닝은 [`signal_state/README.md`](signal_state/README.md) 참고.
+
 COCO 사전학습 `yolov8n.pt`의 범용 `car` 클래스를 그대로 쓰는 대신, 대회에서 실제로
 회피해야 하는 **그 차량 한 대**(#46, TRAXXAS 검정/연두)의 뒷모습을 잘 잡도록
 파인튜닝하는 것이 목표. 회피 시나리오상 우리 차가 뒤에서 접근하므로 뒷모습 검출이
