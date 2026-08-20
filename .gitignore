@@ -1,0 +1,18 @@
+# 원본/중간 이미지·가중치는 용량이 커서 git에 안 올림 — 경로만 README/스크립트로 관리
+data/raw/
+data/pseudo_labeled/
+*.jpg
+*.jpeg
+*.png
+!docs/**/*.png
+!docs/**/*.jpg
+
+*.pt
+*.onnx
+*.onnx.data
+runs/
+
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
