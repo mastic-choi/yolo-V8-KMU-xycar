@@ -6,6 +6,8 @@ data/pseudo_labeled/
 *.png
 !docs/**/*.png
 !docs/**/*.jpg
+!*/docs/**/*.png
+!*/docs/**/*.jpg
 
 *.pt
 *.onnx

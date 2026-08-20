@@ -20,13 +20,13 @@ v1.0.0(`data/seed_labeled` 2,127장으로 학습)로 `data/temp/no_detection`(�
 이 PC로 옮긴다(scp/USB/공유 드라이브 등 편한 방법으로). 예시:
 
 ```bash
-scp mac:~/code/yolo-V8-KMU-xycar/data/round2_new_detections.zip ~/yolo-V8-KMU-xycar/data/
+scp mac:~/code/yolo-V8-KMU-xycar/target_vehicle/data/round2_new_detections.zip ~/yolo-V8-KMU-xycar/target_vehicle/data/
 ```
 
 ## 2. 기존 `seed_labeled`에 병합
 
 ```bash
-cd ~/yolo-V8-KMU-xycar
+cd ~/yolo-V8-KMU-xycar/target_vehicle
 git pull                       # 맥에서 커밋한 labels/*.txt(라벨 텍스트만) 반영
 unzip -q data/round2_new_detections.zip -d data/
 

@@ -1,102 +1,76 @@
-# yolo-V8-KMU-xycar
+<div align="center">
+<h1>yolo-V8-KMU-xycar 🏎️🚦</h1>
+<p>국민대 자율주행 경진대회용 <a href="https://github.com/mastic-choi/UMK">UMK/track_drive</a>가
+쓰는 두 인식 모델 — <b>방해차량 검출</b>과 <b>신호등 상태 분류</b> — 을 COCO/구버전
+사전학습 그대로 쓰지 않고 대회 트랙 도메인에 맞춰 파인튜닝하는 저장소.</p>
+</div>
 
-국민대 자율주행 경진대회용 `track_drive` 저장소(`~/orca/workspaces/UMK/...`)의
-`yolo_vehicle.py`(방해차량 검출)가 신뢰도 0.45대로 낮게 나오는 문제를 고치기 위한
-**전용 차량(방해차량) YOLOv8 파인튜닝** 작업 저장소.
+## 하위 프로젝트
 
-이 아래 내용은 `target_vehicle` 하위 프로젝트에 대한 설명. 신호등(signal_state)
-분류 파인튜닝은 [`signal_state/README.md`](signal_state/README.md) 참고.
+이 저장소는 서로 독립적인 두 YOLOv8 파인튜닝 프로젝트를 담고 있음 — 같은 bootstrap
+방법론(자동검출 → 사람 검수 → 재학습 반복)을 공유하지만 데이터/클래스/방법은 각자
+다름. 자세한 내용은 각 하위 폴더의 README 참고.
 
-COCO 사전학습 `yolov8n.pt`의 범용 `car` 클래스를 그대로 쓰는 대신, 대회에서 실제로
-회피해야 하는 **그 차량 한 대**(#46, TRAXXAS 검정/연두)의 뒷모습을 잘 잡도록
-파인튜닝하는 것이 목표. 회피 시나리오상 우리 차가 뒤에서 접근하므로 뒷모습 검출이
-1차 목표.
-
-## 데이터 소스 (전부 로컬 경로, git에 이미지 자체는 안 올림)
-
-| 풀 | 경로 | 장수 | 성격 |
+| 프로젝트 | 검출 대상 | 클래스 | 상태 |
 |---|---|---|---|
-| dataset | `~/code/fine-tune/dataset/` | 2123 | 원래 차선 파인튜닝용 원본 주행 프레임(차량은 우연히 등장) |
-| lap_005 | `~/Downloads/lap_005/` | 2734 | 지그재그 보강 주행 프레임(차량은 우연히 등장) |
-| ~~lap_001 3~~ | `~/Downloads/lap_001 3/` | 2262 | **`dataset`과 파일 내용이 완전히 동일함(MD5 일치, 2026-08-20 확인)** — 중복이라 스캔 제외 |
-| 자동차1 | `~/Downloads/20260820/자동차1/` | 7223 | **차량 전용 촬영**(사람이 손으로 각도·거리 바꿔가며 촬영) |
-| 자동차2 | `~/Downloads/20260820/자동차2/` | 3061 | 위와 동일 성격, 두 번째 세션 — car1/car2는 촬영 세션 구분일 뿐 **같은 차량 한 대**, 라벨 클래스는 통합 |
+| [`target_vehicle/`](target_vehicle/README.md) | 방해차량(vehA #46, TRAXXAS) | 1개 (`target_vehicle`) | [v1.1.0](https://github.com/mastic-choi/yolo-V8-KMU-xycar/releases/tag/v1.1.0) 완료 |
+| [`signal_state/`](signal_state/README.md) | 트랙 신호등 점등 상태 | 3개 (`red`/`green_straight`/`green_left`) | 재학습 진행 중 |
 
-`dataset`/`lap_005`는 차량이 "우연히" 찍힌 프레임을 찾아야 해서 스캔 후 사람이
-골라내는 과정이 필요했다. `자동차1`/`자동차2`(총 10,284장)는 거의 모든 프레임에
-차량이 있어 이번 1차 학습의 실제 데이터 소스가 됐다 — 아래 `data/seed_labeled`가
-그 결과물.
+---
 
-**`data/seed_labeled/`(2,127장, git엔 `labels/*.txt`만 커밋)** — 지금까지 실제로
-쓴 최종 학습 데이터. `images/`는 로컬에만 있음.
+## target_vehicle — Before / After
 
-## 방법론 — bootstrap(반복) 라벨링, 1차 라운드는 CVAT 없이 완료
+`track_drive`의 `yolo_vehicle.py`가 COCO 범용 `car` 클래스를 그대로 써서 신뢰도가
+낮았던(실측 0.15~0.78, 평균 0.3대) 문제를 고치기 위해, 그 차량 한 대만 전용으로
+검출하도록 파인튜닝. 같은 프레임 4장에 위=파인튜닝 전(COCO), 아래=파인튜닝 후
+(v1.1.0)를 나란히 비교 — COCO는 4장 중 2장을 놓치거나 신뢰도가 낮은데, 파인튜닝
+모델은 4장 전부 0.9대 신뢰도로 검출.
 
-`fine-tune` 저장소가 TwinLiteNet 차선 모델을 파인튜닝할 때 썼던 것과 같은 큰 틀
-(자동 라벨→사람 보정→재학습 반복)을 재사용하되, **1차 라운드는 원래 계획했던
-CVAT 수작업 없이 "자동검출 → 사람이 틀린 것만 삭제" 방식으로 끝냈다** — 처음부터
-박스를 그리는 것보다 훨씬 빨랐다.
+![target_vehicle before/after](target_vehicle/docs/before_after_montage.jpg)
 
-### 1차 라운드 (완료, [v1.0.0](https://github.com/mastic-choi/yolo-V8-KMU-xycar/releases/tag/v1.0.0) 릴리즈)
+| Model | 학습 데이터 | epoch | 학습 시간 | mAP50 | mAP50-95 | Precision | Recall |
+|:-----:|:-----------:|:-----:|:---------:|:-----:|:--------:|:---------:|:------:|
+| [v1.0.0](https://github.com/mastic-choi/yolo-V8-KMU-xycar/releases/tag/v1.0.0) | seed_labeled 2,127장 | 80 (best@50) | 10.5분 | 0.995 | 0.974 | 1.0 | 1.0 |
+| **[v1.1.0](https://github.com/mastic-choi/yolo-V8-KMU-xycar/releases/tag/v1.1.0)** | seed+round2 6,041장 | 139 (best@76) | 49분 | 0.995 | **0.985** :arrow_up: | 1.0 | 1.0 |
 
-1. **자동 검출**: COCO `yolov8n.pt`로 자동차1/2 전체(10,284장) 스캔
-   (`scripts/scan_dedicated_capture.py`) → 검출 6,070장(59%), `conf≥0.5` 2,181장 /
-   `conf≥0.7` 903장.
-2. **사람이 "틀린 것만" 삭제**: 박스를 그려서 `data/temp/{conf_ge_0.7,conf_ge_0.5,
-   wrong_vehicle_suspect,no_detection}`로 분류 → 사람이 폴더를 훑으며 오검출만
-   지움(그리기 없음, 삭제만). `wrong_vehicle_suspect`는 색상 휴리스틱(연두=vehA/
-   빨강=vehB)으로 걸러낸 의심 후보였는데, 실제로는 대부분 정상 검출로 확인됨(색상
-   판별기 자체가 부정확했음 — 아래 "알려진 함정" 참고).
-3. **라벨 자동 생성**: 검수 후 남은 파일들의 CSV 박스 좌표를 그대로 YOLO 포맷으로
-   변환(정규화 `cx,cy,w,h`, 클래스 0 하나) → `data/seed_labeled/` 2,127장 완성.
-   사람이 박스를 직접 그린 적은 한 번도 없음 — "그리기"는 COCO 모델이, "판단"만
-   사람이 함.
-4. **파인튜닝**: `notebooks/finetune_yolov8_local_rtx.ipynb`(Ubuntu + RTX 3070 Ti),
-   `yolov8n.pt`에서 시작, train 1808/val 319. Best epoch 50, patience 30으로
-   epoch 80 조기종료(총 10.5분). val mAP50 0.995, mAP50-95 0.974.
-   - **주의**: train/val을 프레임 단위로 랜덤 분할해서, 연속 촬영 영상이라 이웃
-     프레임끼리 train/val에 나뉘어 들어갔을 수 있음(사실상 같은 장면) — 이 val
-     숫자를 곧이곧대로 믿지 말 것. 다음 라운드부터는 영상 구간(시간 창) 단위로
-     분할해야 함.
+방법론, 데이터 소스, 알려진 함정은 → [`target_vehicle/README.md`](target_vehicle/README.md)
 
-### 다음 라운드 (예정)
+---
 
-5. **의사라벨(pseudo-label) 확장**: v1.0.0 모델로 `data/temp/no_detection`
-   (4,214장, 기존 COCO가 못 잡았던 것들)을 재검출 → 새로 잡히는 프레임을 2차
-   시드에 추가. 그래도 안 잡히는 진짜 어려운 케이스만 사람이 수동으로 박스.
-6. **재학습 → 반복**: 수렴할 때까지 2~3회.
-7. **(옵션) SAM2 정밀화**: `~/code/fine-tune/sam2.1_b.pt`로 YOLO 박스를 프롬프트
-   삼아 마스크를 뽑고, 그 마스크의 최소외접사각형을 최종 박스로 쓰면 더 타이트해진다.
+## signal_state — Before / After
 
-## 스크립트
+기존 3클래스(`red`/`green_straight`/`green_left`) 모델이 `green_straight`와
+`green_left`를 자주 혼동하는 문제를 고치기 위해, 신호를 하나의 상태로 고정해두고
+새로 찍은 raw 프레임(6,888장)을 촬영 세션→클래스 매핑으로 라벨링해 데이터를
+739장 → 7,377장(10배)으로 늘려 재학습 중.
 
-- `scripts/scan_coco_car.py` — COCO `yolov8n.pt`로 정적 프레임 풀에서 `car` 클래스
-  검출, 결과를 CSV로 저장(신뢰도/박스좌표).
-- `scripts/scan_color_hsv.py` — 차체 고유 연두색(HSV) 기반 스캔. YOLO가 놓치는
-  "부분적으로 가려진" 프레임을 잡아내는 보조 수단(단, 주황 콘/초록 비상구 표지판
-  등과 색이 겹쳐 오탐 많음 — 결과를 contact sheet로 반드시 육안 검토할 것).
-- `scripts/scan_dedicated_capture.py` — 자동차1/2(전용 촬영) 전체를 스캔해 검출
-  성공률/분포 파악용.
-- `scripts/curate_seed_candidates.py` — 1차 세션에서 사람이 육안 확인한 뒷모습
-  구간(dataset/lap_005 프레임 범위)을 `data/candidates/`로 복사해 재현.
+*(학습 진행 중 — 완료되면 before/after 몽타주 + 정량 비교 표로 이 섹션 갱신 예정)*
 
-## 알려진 함정 (실제로 겪은 것들)
+방법론, 세션→클래스 매핑, 알려진 함정은 → [`signal_state/README.md`](signal_state/README.md)
 
-- **작은 썸네일(contact sheet)만 보고 판단하면 놓친다** — 의자 카트를 차로
-  오인하거나, 반대로 카트에 가려진 차량 뒷부분을 놓치는 사례가 실제로 있었다.
-  애매하면 반드시 원본 해상도로 재확인할 것.
-- **색상 기반 스캔은 오탐이 많다** — 주황 라바콘, 초록 "EXIT" 표지판, 목재 패널이
-  차체의 연두색 HSV 범위와 겹친다. 후보 목록을 그대로 믿지 말고 contact sheet로
-  걸러낼 것.
-- **주차 스팟(정지 상태) 프레임은 매 랩마다 중복 등장** — 같은 차량이 트랙 옆
-  같은 자리에 세워져 있어 여러 랩 영상에 반복 출현한다. 실제 "통과 중" 장면과
-  구분해서 과대표집되지 않게 주의.
-- **색상 기반 오탐 판별기도 틀릴 수 있다** — `wrong_vehicle_suspect`로 격리했던
-  116장 중 62장이 사람 검수 결과 실제로는 정상 검출이었다(반사광/그림자로 HSV
-  판정이 흔들림). 자동 필터는 후보를 줄이는 용도로만 쓰고, 최종 판단은 항상
-  사람이 원본을 보고 할 것.
-- **`model.export(format='onnx', nms=True)`가 항상 먹히는 게 아니다** —
-  v1.0.0 `best.onnx`를 열어보니 output shape이 `[1,5,8400]`(NMS 미적용 raw
-  출력)이었다. `track_drive/perception/yolo_vehicle.py`가 기대하는 `nms=True`
-  6열 포맷(`[x1,y1,x2,y2,conf,cls]`)과 다르므로 **이대로는 실차에 못 넣는다** —
-  실차 배포 전 export를 다시 확인/수정할 것.
+---
+
+## 레포 구성
+
+```
+target_vehicle/
+  README.md                            # 방법론/데이터/알려진 함정
+  BOOTSTRAP_ROUND2.md                   # 2차 라운드 실행 가이드
+  notebooks/finetune_yolov8_local_rtx.ipynb
+  scripts/                              # 스캔·큐레이션 스크립트
+  data/seed_labeled/labels/             # 라벨만 커밋(이미지는 로컬)
+  docs/before_after_montage.jpg
+signal_state/
+  README.md
+  train.py
+  scripts/                              # 스캔·데이터셋 병합 스크립트
+  data/seed_labeled/labels/
+```
+
+데이터셋 원본 이미지/가중치는 용량 문제로 이 레포에 포함하지 않음(`.gitignore`
+참고) — 라벨 텍스트와 스크립트, 문서만 커밋.
+
+## 관련 링크
+
+- 실차 배포 대상: [mastic-choi/UMK](https://github.com/mastic-choi/UMK) (`track_drive` 패키지)
+- 같은 방법론을 차선 인식에 적용한 자매 프로젝트: [TwinLiteNet-KMU-finetune](https://github.com/mastic-choi/TwinLiteNet-KMU-finetune)
