@@ -14,7 +14,7 @@
 | 프로젝트 | 검출 대상 | 클래스 | 상태 |
 |---|---|---|---|
 | [`target_vehicle/`](target_vehicle/README.md) | 방해차량(vehA #46, TRAXXAS) | 1개 (`target_vehicle`) | [v1.1.0](https://github.com/mastic-choi/yolo-V8-KMU-xycar/releases/tag/v1.1.0) 완료 |
-| [`signal_state/`](signal_state/README.md) | 트랙 신호등 점등 상태 | 3개 (`red`/`green_straight`/`green_left`) | 재학습 진행 중 |
+| [`signal_state/`](signal_state/README.md) | 트랙 신호등 점등 상태 | 3개 (`red`/`green_straight`/`green_left`) | v1.1.0 완료 |
 
 ---
 
@@ -42,9 +42,16 @@
 기존 3클래스(`red`/`green_straight`/`green_left`) 모델이 `green_straight`와
 `green_left`를 자주 혼동하는 문제를 고치기 위해, 신호를 하나의 상태로 고정해두고
 새로 찍은 raw 프레임(6,888장)을 촬영 세션→클래스 매핑으로 라벨링해 데이터를
-739장 → 7,377장(10배)으로 늘려 재학습 중.
+739장 → 7,377장(10배)으로 늘려 재학습. 위=v1.0.0(기존 739장), 아래=v1.1.0(보강
+7,377장) — v1.0.0이 실제로 `green_straight`를 `green_left`로 오분류하던 프레임
+2장(빨간 박스, 1번·4번 컬럼)이 v1.1.0에서 전부 정확히 고쳐짐.
 
-*(학습 진행 중 — 완료되면 before/after 몽타주 + 정량 비교 표로 이 섹션 갱신 예정)*
+![signal_state before/after](signal_state/docs/before_after_montage.jpg)
+
+| Model | 학습 데이터 | epoch | 학습 시간 | mAP50 | mAP50-95 | Precision | Recall |
+|:-----:|:-----------:|:-----:|:---------:|:-----:|:--------:|:---------:|:------:|
+| v1.0.0 (기존, 사람이 직접 라벨링) | 739장 | 50 (best@27) | 39분 | 0.995 | 0.807 | 0.995 | 0.996 |
+| **v1.1.0** (raw데이터 세션 매핑 보강) | 7,377장 | 87 (best@67) | 37.7분 | 0.995 | **0.956** :arrow_up: | 1.0 | 1.0 |
 
 방법론, 세션→클래스 매핑, 알려진 함정은 → [`signal_state/README.md`](signal_state/README.md)
 
@@ -63,8 +70,9 @@ target_vehicle/
 signal_state/
   README.md
   train.py
-  scripts/                              # 스캔·데이터셋 병합 스크립트
-  data/seed_labeled/labels/
+  scripts/                              # 스캔·데이터셋 병합·몽타주 스크립트
+  data/seed_labeled/labels/             # 라벨만 커밋(이미지는 로컬)
+  docs/before_after_montage.jpg
 ```
 
 데이터셋 원본 이미지/가중치는 용량 문제로 이 레포에 포함하지 않음(`.gitignore`

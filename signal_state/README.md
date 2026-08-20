@@ -5,6 +5,35 @@
 green_left)가 목표. 기존 모델(`yolo_train_env`, 로컬 macOS 학습, 739장)이 특히
 `green_straight` vs `green_left`를 자주 혼동해서, 데이터를 늘려 재학습하기로 함.
 
+## Results
+
+### Before / After — 같은 프레임 4장 비교
+
+위=v1.0.0(기존 739장, 사람이 직접 라벨링), 아래=v1.1.0(raw데이터 세션 매핑으로
+보강한 7,377장 재학습). 빨간 박스(X)=오분류, 초록 박스=정분류. v1.0.0이 실제로
+`green_straight`를 `green_left`로 오분류하던 프레임 2장(1번/4번 컬럼)이 v1.1.0에서
+전부 정확히 고쳐졌고, 원래 맞았던 `red`/`green_left`(2번/3번)도 신뢰도가 올라감.
+
+![signal_state before/after](docs/before_after_montage.jpg)
+
+### 정량 비교 (val split 기준)
+
+| Model | 학습 데이터 | epoch | 학습 시간 | mAP50 | mAP50-95 | Precision | Recall |
+|:-----:|:-----------:|:-----:|:---------:|:-----:|:--------:|:---------:|:------:|
+| v1.0.0 (기존, 사람이 직접 라벨링) | 739장 (train 629/val 110) | 50 (best@27) | 39분 | 0.995 | 0.807 | 0.995 | 0.996 |
+| **v1.1.0** (raw데이터 세션 매핑 보강) | 7,377장 (train 6273/val 1104) | 87 (best@67) | 37.7분 | 0.995 | **0.956** :arrow_up: | 1.0 | 1.0 |
+
+RTX 3070 Ti 기준. 데이터를 10배(739→7,377장) 늘리면서도 학습 시간은 오히려 비슷
+(patience 조기종료 덕분) — mAP50-95가 **0.807 → 0.956(+0.149)**로 크게 개선됐는데,
+이는 몽타주에서 보이듯 실제로 헷갈리던 클래스(green_straight/green_left) 오분류가
+줄어든 결과.
+
+### 알려진 함정 — `nms=True` export가 여기서도 안 먹힘
+
+`target_vehicle`이 겪었던 것과 똑같은 문제 재현: v1.1.0 `best.onnx`를
+`onnxruntime`으로 열어보면 output shape이 `[1, 7, 8400]`(NMS 미적용 raw, 4 박스
+좌표 + 클래스 3개)이다. 실차/ROS 노드에 바로 넣기 전 export를 다시 확인/수정할 것.
+
 ## 데이터 소스
 
 | 풀 | 장수 | 성격 |
@@ -51,9 +80,7 @@ green_left)가 목표. 기존 모델(`yolo_train_env`, 로컬 macOS 학습, 739�
 - `train.py` — 기존 `signal_state` best.pt에서 이어학습(scratch 아님), epochs=100,
   patience=20, device=0(CUDA), 학습 후 검증+ONNX export(`nms=True`)까지 자동 실행.
   **`target_vehicle`가 실제로 겪었던 함정 참고**: export 직후 ONNX output shape이
-  `[1,N,6]`(NMS 적용됨)인지 반드시 확인할 것 — `[1,5,8400]`이면 안 먹힌 것.
-
-## 결과
-
-(학습 진행 중 — 완료되면 mAP50/mAP50-95, epoch 수, 학습 시간, ONNX export 확인
-결과로 이 섹션 갱신 예정)
+  `[1,N,6]`(NMS 적용됨)인지 반드시 확인할 것 — 실제로 `[1,7,8400]`으로 안 먹혔음
+  (위 "알려진 함정" 참고).
+- `scripts/make_before_after_montage.py` — 위 Results 몽타주를 만드는 스크립트
+  (v1.0.0 vs v1.1.0, 같은 프레임 4장에 GT 대비 정오답 색상 표시).
