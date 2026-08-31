@@ -1,6 +1,6 @@
 <div align="center">
 <h1>yolo-V8-KMU-xycar 🏎️🚦</h1>
-<p>국민대 자율주행 경진대회용 <a href="https://github.com/mastic-choi/UMK">UMK/track_drive</a>가
+<p>국민대 자율주행 경진대회용 <a href="https://github.com/mastic-choi/KURiver-KMU-auto-contest">KURiver-KMU-auto-contest/track_drive</a>가
 쓰는 두 인식 모델 — <b>방해차량 검출</b>과 <b>신호등 상태 분류</b> — 을 COCO/구버전
 사전학습 그대로 쓰지 않고 대회 트랙 도메인에 맞춰 파인튜닝하는 저장소.</p>
 </div>
@@ -81,5 +81,5 @@ signal_state/
 
 ## 관련 링크
 
-- 실차 배포 대상: [mastic-choi/UMK](https://github.com/mastic-choi/UMK) (`track_drive` 패키지)
+- 실차 배포 대상: [mastic-choi/KURiver-KMU-auto-contest](https://github.com/mastic-choi/KURiver-KMU-auto-contest) (`track_drive` 패키지)
 - 같은 방법론을 차선 인식에 적용한 자매 프로젝트: [TwinLiteNet-KMU-finetune](https://github.com/mastic-choi/TwinLiteNet-KMU-finetune)
